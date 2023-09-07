@@ -1,0 +1,594 @@
+
+
+Function GetValueFromSQL(Table,Field,Condition)
+	GetValueFromSQL = DLookup(Field, Table, Condition)
+End Function
+
+'Opens the given form
+Sub OpenF(Form)
+	InitConnection()
+	If(Not AllForms(Form).IsLoaded)Then
+				OpenForm(Form)
+	End If
+End Sub
+
+'Closes the given form
+Sub CloseF(Form)
+	InitConnection()
+	mClose(acForm,Form)
+End Sub
+
+'Sets the row source of the given control to the given SQL
+'Example SQL for combining multiple columns: "SELECT ""id"" || '-' || ""sname"" || '-' || ""surname"", ""id"" FROM ""Student"""
+'Note that even we do not directly use it, second column should be defined in the query
+Sub SQLToControl(Form,Control,SQL)
+	InitConnection()
+	myForm = Forms(Form)
+	myControl = myForm.Controls(Control)
+	myControl.Requery()
+	myControl.RowSourceType = com.sun.star.form.ListSourceType.SQL
+	myControl.RowSource = SQL
+End Sub
+
+'Runs the given SQL query
+'Example SQL: "SELECT ""Name"" FROM ""Student"" WHERE ""ID"" = 1"
+Sub Query(SQL)
+	InitConnection()
+	RunSQL(SQL)
+End Sub
+
+'Displays the given message
+Sub ShowMessage(Message)
+	MsgBox(Message)
+End Sub
+
+'Sets the value of the control in the given form to the given value
+Sub SetValueTo(Form,Control,Value)
+	InitConnection()
+	myForm = Forms(Form)
+	myControl = myForm.Controls(Control)
+	myControl.Value = Value
+End Sub
+
+'Returns the value of a control splitting the value by "-", returning the item in given index position
+Function GetValueOfIndex(Form,Control,Index)
+	InitConnection()
+	myForm = Forms(Form)
+	myControl = myForm.Controls(Control)
+	GetValueOfIndex = Split(myControl.Value,"-")(Index)
+End Function
+
+'Returns the value of a control in the given form
+Function GetValueOf(Form,Control)
+	InitConnection()
+	myForm = Forms(Form)
+	myControl = myForm.Controls(Control)
+	GetValueOf = myControl.Value
+End Function
+
+'Initializes connection to the database using Access2Base library
+Sub InitConnection
+	GlobalScope.BasicLibraries.loadLibrary("Access2Base")
+	Call Application.OpenConnection(ThisDatabaseDocument)
+End Sub
+
+Sub Deliverer
+	OpenF("Deliverer_LoginForm")
+	CloseF("MainForm")
+End Sub
+
+Sub Deliverer_Logout
+	OpenF("Deliverer_LoginForm")
+	CloseF("Deliverer_MainForm")
+End Sub
+
+Sub Deliverer_BackToMain
+	OpenF("MainForm")
+	CloseF("Deliverer_LoginForm")
+End Sub
+
+Sub DelivererBackMain1
+	CloseF("Deliverer_StatusForm")
+End Sub
+
+Sub DelivererBackMain
+	CloseF("Deliverer_CarryForm")
+End Sub
+
+Sub Customer
+	OpenF("Customer_LoginForm")
+	CloseF("MainForm")
+End Sub
+
+Sub Service
+	OpenF("Service_LoginForm")
+	CloseF("MainForm")
+End Sub
+
+Sub Dealer
+	OpenF("Dealer_LoginForm")
+	CloseF("MainForm")
+End Sub
+
+Sub Main1Deliverer
+	OpenF("MainForm")
+	CloseF("Deliverer_LoginForm")
+End Sub
+
+Sub Main2Customer
+	OpenF("MainForm")
+	CloseF("Customer_LoginForm")
+End Sub
+
+Sub Main3Dealer
+	OpenF("MainForm")
+	CloseF("Dealer_LoginForm")
+End Sub
+
+Sub Main4Service
+	OpenF("MainForm")
+	CloseF("Service_LoginForm")
+End Sub
+
+Sub Customer_Login
+	If GetValueOf("Customer_LoginForm","CustomerPassword") = "" Then
+		print "Password CANNOT Be Empty!"
+	ElseIf GetValueOf("Customer_LoginForm","CustomerEmail") = "" Then
+		print "Email CANNOT Be Empty!"
+	End If
+	customer_email = "'"& GetValueOf("Customer_LoginForm","CustomerEmail") & "'"
+	password = "'" & GetValueOf("Customer_LoginForm","CustomerPassword") & "'"
+	returnValue = GetValueFromSQL("""Customer""", """customer_email""", """customer_email"" = " & customer_email)
+	returnValue1 = GetValueFromSQL("""User""", """password""", """E-mail"" = " & customer_email & "AND""password"" =" & password)
+	If returnValue = NULL Or returnValue1 = NULL Then
+		print "Customer Email or password is wrong!"
+	Else 
+	print "Welcome Customer " & returnValue
+	OpenF("Customer_MainForm")
+	SetValueTo("Customer_MainForm","Customer_Email", "" & returnValue)
+	CloseF("Customer_LoginForm")
+	End If
+End Sub
+
+Sub Customer_Logout
+	OpenF("Customer_LoginForm")
+	CloseF("Customer_MainForm")
+End Sub
+
+Sub Customer_BackToMain
+	OpenF("MainForm")
+	CloseF("Customer_LoginForm")
+End Sub
+
+Sub Customer_BackToCustomerMain
+	OpenF("Customer_MainForm")
+	CloseF("Customer_OfferListForm")
+End Sub
+
+Sub CustomerReview
+	OpenF("Customer_Review")
+	customer_email = "'"& GetValueOf("Customer_MainForm","Customer_Email") & "'"
+	orders = "SELECT ""orderid"" || '-' || ""status"", ""orderid"" FROM ""Order"", ""Create"" WHERE ""Order"".""orderid""=""Create"".""orderid""  AND ""Create"".""customer_email""=" &customer_email
+	SQLToControl("Customer_Review","MyOrders",orders)
+End Sub
+
+Sub GoToOfferList
+	OpenF("Customer_OfferListForm")
+	q1 = "SELECT ""dealer_email"" || '-' || ""pnumber"" || '-' || ""title"" || '-' || ""price"", ""pnumber"" FROM ""Offer"""
+	SQLToControl("Customer_OfferListForm","OfferList",q1)
+	q2 = "SELECT ""cname"", ""cname"" FROM ""Category"""
+	SQLToControl("Customer_OfferListForm","Category",q2)
+End Sub
+
+Sub ListTheCategory
+	categoryname = "'" & GetValueOf("Customer_OfferListForm","Category") & "'"
+	products = "SELECT ""Offer"".""dealer_email"" || '-' || ""Offer"".""pnumber"" || '-' || ""Offer"".""title"" || '-' || ""Offer"".""price"", ""Offer"".""dealer_email"" FROM ""Offer"" , ""Belong""  WHERE  ""Belong"".""cname"" = " & categoryname & " AND ""Offer"".""pnumber"" = ""Belong"".""pnumber"""
+	SQLToControl("Customer_OfferListForm","OfferList",products)
+End Sub
+
+Sub FromReviewToMain
+	CloseF("Customer_Review")
+	OpenF("Customer_MainForm")
+End Sub
+
+Sub OffersMyInOrder
+	orderid = GetValueOfIndex("Customer_Review","MyOrders", 0)
+	customer_email = "'"& GetValueOf("Customer_MainForm","Customer_Email") & "'"
+	offers = "SELECT ""dealer_email"" || '-' ||  ""pnumber"" || '-' || ""price"" || '-' || ""amountpo"", ""pnumber"" FROM ""ToBuy"", ""Offer"" WHERE ""ToBuy"".""orderid"" = " & orderid & " AND ""ToBuy"".""customer_email"" = " & customer_email & " AND ""ToBuy"".""dealer_email"" = ""Offer"".""dealer_email"" AND ""ToBuy"".""pnumber"" = ""Offer"".""pnumber"""
+	SQLToControl("Customer_Review","OffersInOrder",offers)
+End Sub
+
+Sub WriteReview
+	pnumber =Cint(GetValueOfIndex("Customer_Review","OffersInOrder",1))
+	dealeremail = "'" & GetValueOfIndex("Customer_Review","OffersInOrder",0) & "'"
+	customeremail = "'"& GetValueOf("Customer_MainForm","Customer_Email") & "'"
+	rating = Cint(GetValueOf("Customer_Review","Rating"))
+	newreview = "'" & GetValueOf("Customer_Review","Review") & "'"
+	orderid = Cint(GetValueOfIndex("Customer_Review","MyOrders", 0))
+	orderstatus = GetValueFromSQL("""Order""", """status""", """orderid"" = " & orderid & "AND""status"" = 'Shipping'") 
+	orderstatus1 = GetValueFromSQL("""Order""", """status""", """orderid"" = " & orderid & "AND""status"" = 'Processing'") 	
+	orderstatus2 = GetValueFromSQL("""Order""", """status""", """orderid"" = " & orderid & "AND""status"" = 'Waiting'") 		
+	returnVal = GetValueFromSQL("""Review""", """pnumber""", """customer_email"" = " & customeremail & "AND""dealer_email"" =" & dealeremail & "AND""pnumber"" = " & pnumber)
+	If returnVal = NULL Then
+		If orderstatus = NULL AND orderstatus1 = NULL AND orderstatus2 = NULL Then
+			addnewreview = "INSERT INTO ""Review"" VALUES(" & customeremail & ", " & dealeremail & ", " & pnumber & ", " & rating & ", " & newreview & ")"
+			Query(addnewreview)
+			print "Your Review is Added"
+			SetValueTo("Customer_Review","Review","")
+			SetValueTo("Customer_Review","Rating","")
+		Else
+			print "Order is not delivered yet"
+			SetValueTo("Customer_Review","Review","")
+			SetValueTo("Customer_Review","Rating","")
+		End If
+	Else 
+		print "You already posted review for this product!"
+		SetValueTo("Customer_Review","Review","")
+		SetValueTo("Customer_Review","Rating","")
+	End If
+End Sub
+
+
+Sub SearchOffer
+	OfferTitle = "'"& GetValueOf("Customer_OfferListForm","OfferTitle") & "'"
+	returnValue = "'"&GetValueFromSQL("""Offer""", """title""", """title"" = " & OfferTitle)&"'"
+	If OfferTitle = "" Or returnValue = NULL Then
+		print "Please enter a valid offer title!"
+	Else 
+	SearchedOffer = "SELECT ""dealer_email"" || '-' || ""pnumber"" || '-' || ""title"" || '-' || ""price"", ""pnumber"" FROM ""Offer"" WHERE ""Offer"".""title"" = " & OfferTitle 
+	SQLToControl("Customer_OfferListForm","OfferList",SearchedOffer)
+	End If
+End Sub
+	
+Sub CleanFilter
+	q1 = "SELECT ""dealer_email"" || '-' || ""pnumber"" || '-' || ""title"" || '-' || ""price"", ""pnumber"" FROM ""Offer"""
+	SQLToControl("Customer_OfferListForm","OfferList",q1)
+End Sub
+
+Sub AddToBag
+	Customer_Email = "'" & GetValueOf("Customer_MainForm","Customer_Email") & "'"
+	Amount = Cint(GetValueOf("Customer_OfferListForm","Amount"))
+	Dealer_Email = "'" & GetValueOfIndex("Customer_OfferListForm","OfferList",0) & "'"
+	pnumber = Cint(GetValueOfIndex("Customer_OfferListForm","OfferList",1))
+	title = "'" & GetValueOfIndex("Customer_OfferListForm","OfferList",2) & "'"
+	price = Cint(GetValueOfIndex("Customer_OfferListForm","OfferList",3))
+	AddBag = "INSERT INTO ""ProductInBag""(""Customer_Email"",""Dealer_Email"", ""pnumber"",""title"",""price"",""Amount"") VALUES (" & Customer_Email & " , " & Dealer_Email & "," &pnumber &"," & title &"," & price &"," & Amount &")"
+	Query(AddBag)
+	Product = "SELECT ""Amount"" || '-' || ""Dealer_Email"" || '-' || ""pnumber"" || '-' || ""title"" || '-' || ""price"", ""Amount"" FROM ""ProductInBag"" WHERE ""Customer_Email"" = " & Customer_Email
+	SQLToControl("Customer_OfferListForm","MyBag",Product)
+	TotalPrice = GetValueOf("Customer_OfferListForm","TotalPrice")
+	If TotalPrice = "" Then
+		Price = Amount * price
+		SetValueTo("Customer_OfferListForm","TotalPrice",""& Price)
+	Else
+		TotalPrice = Cint(GetValueOf("Customer_OfferListForm","TotalPrice"))
+		Price = TotalPrice + (Amount * price)
+		SetValueTo("Customer_OfferListForm","TotalPrice",""& Price)
+	End If
+End Sub
+
+Sub ConfirmBag
+	NewOrderID = Cint(GetValueFromSQL("""Order""", """orderid""","""orderid"" = SELECT MAX(""orderid"") FROM ""Order""")) + 1
+	Customer_Email = "'" & GetValueOf("Customer_MainForm","Customer_Email") & "'"
+	Customer_email = "'" & GetValueFromSQL("""ProductInBag""","""Customer_Email""","""Customer_Email"" = " &Customer_Email) & "'"
+	If Customer_Email = Customer_email Then 
+		AddNewOrder =  "INSERT INTO ""Order""(""orderid"", ""status"") VALUES (" & NewOrderID & ", 'Waiting')"
+		Query(AddNewOrder)
+		AddCarry =  "INSERT INTO ""Carry""(""orderid"") VALUES (" & NewOrderID & ")"
+		Query(AddCarry)
+		AddCreate =  "INSERT INTO ""Create""(""orderid"", ""customer_email"") VALUES (" & NewOrderID & "," & Customer_Email & ")"
+		Query(AddCreate)
+		Do
+			Dealer_Email = "'" & GetValueFromSQL("""ProductInBag""","""Dealer_Email""","""Customer_Email"" = " &Customer_Email) & "'"
+			pnumber = GetValueFromSQL("""ProductInBag""","""pnumber""","""Customer_Email"" = " &Customer_Email)
+			amount = GetValueFromSQL("""ProductInBag""","""Amount""","""Customer_Email"" = " &Customer_Email)
+			AddToBuy =  "INSERT INTO ""ToBuy""(""orderid"", ""customer_email"", ""dealer_email"", ""pnumber"",""amountpo"") VALUES (" & NewOrderID & ", " & Customer_Email & " , " & Dealer_Email & "," &pnumber &"," & amount &")"
+			Query(AddToBuy)
+			Delete = "DELETE FROM ""ProductInBag"" WHERE ""Customer_Email"" = " & Customer_Email & " AND ""Dealer_Email"" = " & Dealer_Email &" AND ""pnumber"" = " & pnumber
+			Query(Delete)
+			Product = "SELECT ""Amount"" || '-' || ""Dealer_Email"" || '-' || ""pnumber"" || '-' || ""title"" || '-' || ""price"", ""Amount"" FROM ""ProductInBag"" WHERE ""Customer_Email"" = " & Customer_Email
+			SQLToControl("Customer_OfferListForm","MyBag",Product)
+			Price = ""
+			SetValueTo("Customer_OfferListForm","TotalPrice", Price)
+			Customer_email = "'" & GetValueFromSQL("""ProductInBag""","""Customer_Email""","""Customer_Email"" = " &Customer_Email) & "'"
+		Loop Until Customer_email = NULL	
+	End If
+	print "Your Order Has Succesfully Placed"
+End Sub
+
+Sub Deliverer_Login
+	If GetValueOf("Deliverer_LoginForm","DelivererPassword") = "" Then
+		print "Password CANNOT Be Empty!"
+	ElseIf GetValueOf("Deliverer_LoginForm","DelivererEmail") = "" Then
+		print "Email CANNOT Be Empty!"
+	End If
+	deliverer_email = "'"& GetValueOf("Deliverer_LoginForm","DelivererEmail") & "'"
+	password = "'" & GetValueOf("Deliverer_LoginForm","DelivererPassword") & "'"
+	returnValue = GetValueFromSQL("""Deliverer""", """deliverer_email""", """deliverer_email"" = " & deliverer_email)
+	returnValue1 = GetValueFromSQL("""User""", """password""", """E-mail"" = " & deliverer_email & "AND""password"" =" & password)
+	If returnValue = NULL Or returnValue1 = NULL Then
+		print "Deliverer Email or password is wrong!"
+	Else 
+	print "Welcome Deliverer " & returnValue
+	OpenF("Deliverer_MainForm")
+	SetValueTo("Deliverer_MainForm","Deliverer_Email", "" & returnValue)
+	Deliverer_Truck = GetValueFromSQL("""Associate""", """plateno""", """deliverer_email"" = " & deliverer_email)
+	SetValueTo("Deliverer_MainForm","Deliverer_Truck",""& Deliverer_Truck)
+	CloseF("Deliverer_LoginForm")
+	End If
+End Sub
+
+Sub UpdatePlateNo
+	OpenF("Deliverer_UpdateTruck")
+	Old_plate_no = "'"& GetValueOf("Deliverer_MainForm","Deliverer_Truck")&"'"
+	SetValueTo("Deliverer_UpdateTruck","Old_PlateNo", "" & Old_plate_no)
+End Sub
+
+Sub ConfirmUpdate
+	New_plate_no = "'" &GetValueOf("Deliverer_UpdateTruck","New_Plate_No")& "'"
+	Old_plate_no = GetValueOf("Deliverer_UpdateTruck","Old_PlateNo")
+	Update_Query = "UPDATE ""Truck"" SET ""plateno"" = "& New_plate_no &" WHERE ""plateno"" = "& Old_plate_no
+	Query(Update_Query)
+	print "Your Truck Plate Number is Updated"
+	deliverer_email = "'" &GetValueOf("Deliverer_MainForm","Deliverer_Email")&"'"
+	Plate_no =  GetValueFromSQL("""Associate""", """plateno""", """deliverer_email"" = " & deliverer_email)
+	SetValueTo("Deliverer_MainForm","Deliverer_Truck", "" & Plate_no)
+	CloseF("Deliverer_UpdateTruck")
+End Sub
+
+Sub Cancel_Update
+	CloseF("Deliverer_UpdateTruck")
+End Sub
+
+Sub Deliverer_Processing
+	OpenF("Deliverer_StatusForm")
+	processlist = "SELECT ""Order"".""orderid"" || '-' || ""Customer"".""address"", ""Order"".""orderid"" FROM ""Order"", ""Create"", ""Customer"" WHERE ""Order"".""status"" = 'Processing' AND ""Order"".""orderid""=""Create"".""orderid"" AND ""Create"".""customer_email""=""Customer"".""customer_email"" "
+	SQLToControl("Deliverer_StatusForm","Deliverer_Processing",processlist)
+End Sub
+
+Sub GetOrderIDToCarry
+	OID = GetValueOfIndex("Deliverer_StatusForm","Deliverer_Processing",0)
+	SetValueTo("Deliverer_StatusForm","OrderToShip",OID)
+	products = "SELECT ""pnumber"" || '-' || ""amountpo"", ""pnumber"" FROM ""ToBuy"" WHERE ""orderid"" = " & OID 
+	SQLToControl("Deliverer_StatusForm","pnumbers",products)
+End Sub
+
+Sub ChooseToCarry
+	PlateNo = "'"& GetValueOf("Deliverer_MainForm","Deliverer_Truck")&"'"
+	OrderID = "'"& GetValueOf("Deliverer_StatusForm","OrderToShip")&"'"
+	Carry = "UPDATE ""Carry"" SET ""plateno"" = "& PlateNo & "WHERE ""orderid"" = "& OrderID
+	Process = "UPDATE ""Order"" SET ""status"" = 'Shipping' WHERE ""orderid"" = "& OrderID
+	Query(Carry)
+	Query(Process)
+	q1 = "SELECT ""Order"".""orderid"" || '-' || ""address"", ""orderid"" FROM ""Order"", ""Create"", ""Customer"" WHERE ""Order"".""status"" = 'Processing' AND ""Order"".""orderid""=""Create"".""orderid"" AND ""Create"".""customer_email""=""Customer"".""customer_email"" "
+	SQLToControl("Deliverer_StatusForm","Deliverer_Processing",q1)
+	print "Updated your carry list"
+	carry =  "SELECT ""orderid"" || '-' || ""address"" || '-' || ""status"", ""orderid"" FROM ""Carry"", ""Order"", ""Create"", ""Customer"" WHERE ""Carry"".""plateno"" = " & PlateNo & "AND ""Carry"".""orderid""=""Order"".""orderid"" AND ""Order"".""orderid""=""Create"".""orderid""  AND ""Create"".""customer_email""=""Customer"".""customer_email"" "
+	OpenF("Deliverer_CarryForm")
+	SQLToControl("Deliverer_CarryForm","CarryList",carry)
+End Sub
+
+Sub Deliverer_Carry
+	OpenF("Deliverer_CarryForm")
+	PlateNo = "'"& GetValueOf("Deliverer_MainForm","Deliverer_Truck")&"'"
+	carry = "SELECT ""orderid"" || '-' || ""address"" || '-' || ""status"", ""orderid"" FROM ""Carry"", ""Order"", ""Create"", ""Customer"" WHERE ""Carry"".""plateno"" = " & PlateNo & "AND ""Carry"".""orderid""=""Order"".""orderid"" AND ""Order"".""orderid""=""Create"".""orderid""  AND ""Create"".""customer_email""=""Customer"".""customer_email"" "
+	SQLToControl("Deliverer_CarryForm","CarryList",carry)
+End Sub
+
+Sub GetOrderIDToStatusChange
+	OID = GetValueOfIndex("Deliverer_CarryForm","CarryList",0)
+	SetValueTo("Deliverer_CarryForm","OrderID", OID)
+	currentDate = Format(Date, "yyyy-mm-dd")
+	SetValueTo("Deliverer_CarryForm","DDate", currentDate)	
+End Sub
+
+Sub ConfirmDelivery
+	PlateNo = "'"& GetValueOf("Deliverer_MainForm","Deliverer_Truck")&"'"
+	OrderID = "'" &GetValueOf("Deliverer_CarryForm","OrderID")& "'"
+	DDate = "'" &GetValueOf("Deliverer_CarryForm","DDate")& "'"
+	UpdateStatus =  "UPDATE ""Order"" SET ""status"" = 'Delivered' WHERE ""orderid"" = "& OrderID
+	UpdateDDate =  "UPDATE ""Order"" SET ""ddate"" = " & DDAte & "WHERE ""orderid"" = "& OrderID
+	Query(UpdateStatus)
+	Query(UpdateDDate)
+	carry = "SELECT ""orderid"" || '-' || ""address"" || '-' || ""status"", ""orderid"" FROM ""Carry"", ""Order"", ""Create"", ""Customer"" WHERE ""Carry"".""plateno"" = "& PlateNo &" AND ""Carry"".""orderid""=""Order"".""orderid"" AND ""Order"".""orderid""=""Create"".""orderid""  AND ""Create"".""customer_email""=""Customer"".""customer_email"" "
+	SQLToControl("Deliverer_CarryForm","CarryList",carry)
+	print "Status and Delivery Date is Updated"
+End Sub
+
+Sub Dealer_Login
+	If GetValueOf("Dealer_LoginForm","Dealer_Password") = "" Then
+		print "Password CANNOT Be Empty!"
+	ElseIf GetValueOf("Dealer_LoginForm","Dealer_Email") = "" Then
+		print "Email CANNOT Be Empty!"
+	End If
+	dealer_email = "'"& GetValueOf("Dealer_LoginForm","Dealer_Email") & "'"
+	password = "'" & GetValueOf("Dealer_LoginForm","Dealer_Password") & "'"
+	returnValue = GetValueFromSQL("""Dealer""", """dealer_email""", """dealer_email"" = " & dealer_email)
+	returnValue1 = GetValueFromSQL("""User""", """password""", """E-mail"" = " & dealer_email & "AND""password"" =" & password)
+	If returnValue = NULL Or returnValue1 = NULL Then
+		print "Dealer Email or password is wrong!"
+	Else 
+	print "Welcome Dealer " & returnValue
+	openF("Dealer_MainForm") 
+	SetValueTo("Dealer_MainForm","Dealer_Email",""& returnValue) 
+	CloseF("Dealer_LoginForm") 
+	End If
+End Sub 
+
+Sub Dealer_Logout
+	CloseF("Dealer_MainForm")
+	OpenF("Dealer_LoginForm")
+End Sub
+
+Sub Dealer_BackToMain
+	OpenF("MainForm")
+	CloseF("Dealer_LoginForm")
+End Sub
+
+Sub Dealer_BackToDealerMain
+	CloseF("Dealer_MainForm")
+	OpenF("Dealer_FurnitureList")
+End Sub
+
+Sub GoToCreateFurniture
+	OpenF("Dealer_CreateFurniture")
+	Furnitures = "SELECT ""pnumber"" || '-' || ""pname"" || '-' || ""pcost"", ""pnumber"" FROM ""Furniture"""
+	SQLToControl("Dealer_CreateFurniture","FurnitureList",Furnitures)
+	Category = "SELECT ""cname"", ""cname"" FROM ""Category"""
+	SQLToControl("Dealer_CreateFurniture","Category",Category)
+End Sub
+
+Sub NewProductNumber
+	categoryname = "'" & GetValueOf("Dealer_CreateFurniture","Category") & "'"
+	products = "SELECT ""pnumber"" || '-' || ""pname"" || '-' || ""pcost"", ""pnumber"" FROM ""Furniture"", ""Belong""  WHERE  ""Belong"".""cname"" = " & categoryname & " AND ""Furniture"".""pnumber"" = ""Belong"".""pnumber"""
+	SQLToControl("Dealer_CreateFurniture","FurnitureList",products)
+	newpnumber = Cint(GetValueFromSQL("""Belong""", """pnumber""","""pnumber"" = SELECT MAX(""pnumber"") FROM ""Belong"" WHERE ""cname"" = " &categoryname)) + 1
+	SetValueTo("Dealer_CreateFurniture","pnumber",""& newpnumber)
+End Sub
+
+Sub ClearCategory
+	Furnitures = "SELECT ""pnumber"" || '-' || ""pname"" || '-' || ""pcost"", ""pnumber"" FROM ""Furniture"""
+	SQLToControl("Dealer_CreateFurniture","FurnitureList",Furnitures)
+End Sub
+
+Sub GoToCreateOffer
+	OpenF("Dealer_CreateOffer")
+	dealer_email = GetValueOf("Dealer_MainForm","Dealer_Email")
+	SetValueTo("Dealer_CreateOffer","Dealer_Email",""& dealer_email)
+	DealerEmail = "'" & GetValueOf("Dealer_CreateOffer","Dealer_Email") & "'"
+	Furnitures = "SELECT ""pnumber"" || '-' || ""pname"" || '-' || ""pcost"", ""pnumber"" FROM ""Furniture"""
+	SQLToControl("Dealer_CreateOffer","FurnitureList",Furnitures)
+	MyOffers =  "SELECT ""pnumber"" || '-' || ""title"" || '-' || ""price"", ""pnumber"" FROM ""Offer"" WHERE ""dealer_email"" = " & DealerEmail 
+	SQLToControl("Dealer_CreateOffer","MyOffers",MyOffers)
+End Sub
+
+Sub TakePNumber
+	PNumber = GetValueOfIndex("Dealer_CreateOffer","FurnitureList",0)
+	SetValueTo("Dealer_CreateOffer","PNumber",""& PNumber)
+End Sub
+
+Sub AvgRating
+	dealer_email = "'" & GetValueOf("Dealer_MainForm","Dealer_Email") & "'"
+	pnumber = Cint(GetValueOfIndex("Dealer_CreateOffer","MyOffers",0))
+	AvgRate = "SELECT AVG(""rating""), AVG(""rating"") FROM ""Review"" GROUP BY ""dealer_email"", ""pnumber"" HAVING ""dealer_email"" = "& dealer_email &" AND ""pnumber""=" &pnumber
+	SQLToControl("Dealer_CreateOffer","Rating", AvgRate)	
+End Sub
+
+Sub GoToOrderUpdate
+	OpenF("Dealer_OrderUpdate")
+	dealer_email = "'" & GetValueOf("Dealer_MainForm","Dealer_Email") & "'"
+	orders =  "SELECT DISTINCT ""Order"".""orderid"" || '-' || ""status"", ""orderid"" FROM ""Order"", ""ToBuy"" WHERE ""Order"".""orderid"" = ""ToBuy"".""orderid"" AND ""dealer_email"" = " & dealer_email 
+	SQLToControl("Dealer_OrderUpdate","Orders",orders)
+End Sub
+
+Sub OffersInOrder
+	orderid = Cint(GetValueOf("Dealer_OrderUpdate","Orders"))
+	dealer_email = "'" & GetValueOf("Dealer_MainForm","Dealer_Email") & "'"
+	offers = "SELECT ""pnumber"" || '-' || ""title"" || '-' || ""price"", ""pnumber"" FROM ""ToBuy"", ""Offer"" WHERE ""ToBuy"".""orderid"" = " & orderid & " AND ""ToBuy"".""dealer_email"" = " & dealer_email & " AND ""ToBuy"".""dealer_email"" = ""Offer"".""dealer_email"" AND ""ToBuy"".""pnumber"" = ""Offer"".""pnumber"""
+	SQLToControl("Dealer_OrderUpdate","Offers",offers)
+End Sub
+
+Sub UpdateToProcessing
+	orderid = Cint(GetValueOf("Dealer_OrderUpdate","Orders"))
+	dealer_email = "'" & GetValueOf("Dealer_MainForm","Dealer_Email") & "'"
+	UPDATE = "UPDATE ""Order"" SET ""status"" = 'Processing' WHERE ""orderid"" = "& orderid
+	Query(UPDATE)
+	print "Status Updated"
+	orders =  "SELECT DISTINCT ""Order"".""orderid"" || '-' || ""status"", ""orderid"" FROM ""Order"", ""ToBuy"" WHERE ""Order"".""orderid"" = ""ToBuy"".""orderid"" AND ""dealer_email"" = " & dealer_email 
+	SQLToControl("Dealer_OrderUpdate","Orders",orders)
+End Sub
+
+Sub CloseDealer2
+	CloseF("Dealer_CreateOffer")
+	OpenF("Dealer_MainForm")
+End SUb
+
+Sub CloseDealer3
+	CloseF("Dealer_OrderUpdate")
+	OpenF("Dealer_MainForm")
+End SUb
+
+Sub CloseDealer4
+	CloseF("Dealer_CreateFurniture")
+	OpenF("Dealer_MainForm")
+End SUb
+
+Sub CreateFurniture
+	NewFurniturePnumber = Cint(GetValueOf("Dealer_CreateFurniture","pnumber"))
+	Dealer_Email = "'" & GetValueOf("Dealer_MainForm","Dealer_Email") & "'"
+	NewProductName =  "'" & GetValueOf("Dealer_CreateFurniture","NewProductName")& "'"
+ 	ProductCost = Cint(GetValueOf("Dealer_CreateFurniture","PCost"))
+	cname = "'" & GetValueOf("Dealer_CreateFurniture","Category") & "'"
+	AddNewFurniture =  "INSERT INTO ""Furniture""(""pnumber"", ""pname"", ""pcost"") VALUES (" & NewFurniturePnumber & "," & NewProductName & "," & ProductCost & ")"
+	Query(AddNewFurniture)
+	AddBelong =  "INSERT INTO ""Belong""(""pnumber"",""cname"") VALUES (" & NewFurniturePnumber & "," & cname & ")"
+	Query(AddBelong)
+    print "Your Furniture Has Succesfully Placed" 
+End Sub
+
+Sub CreateOffer
+	NewOfferpnumber = Cint(GetValueOf("Dealer_CreateOffer","pnumber"))
+	Dealer_Email = "'" & GetValueOf("Dealer_MainForm","Dealer_Email") & "'"
+	NewTitle = "'" & GetValueOf("Dealer_CreateOffer", "title") & "'"
+	NewPrice = Cint(GetValueOf("Dealer_CreateOffer","price"))
+	MyOffers = "SELECT ""pnumber"" || '-' || ""title"" || '-' || ""price"", ""pnumber"" FROM ""Offer"" WHERE ""dealer_email"" = " & dealer_email  
+	ReturnValue3 = GetValueFromSQL("""Offer""", """pnumber""", """pnumber"" = " & NewOfferpnumber & " AND ""dealer_email"" = " & Dealer_Email)	
+	If ReturnValue3 = NULL Then 
+	   AddNewOffer =  "INSERT INTO ""Offer""(""pnumber"", ""dealer_email"", ""title"", ""price"") VALUES (" & NewOfferPnumber & ","	& Dealer_Email & "," & NewTitle & "," & NewPrice &")"
+	   Query(AddNewOffer ) 
+	   print "Your Offer Has Succesfully Placed"
+	Else 
+	   print " You already have offer for this product" 
+	End If
+	MyOffers =  "SELECT ""pnumber"" || '-' || ""title"" || '-' || ""price"", ""pnumber"" FROM ""Offer"" WHERE ""dealer_email"" = " & Dealer_Email 
+	SQLToControl("Dealer_CreateOffer","MyOffers",MyOffers)
+	SetValueTo("Dealer_CreateOffer","price", "")
+	SetValueTo("Dealer_CreateOffer","title", "")
+End Sub 
+
+Sub Service_Login
+	If GetValueOf("Service_LoginForm","Service_Password") = "" Then
+		print "Password CANNOT Be Empty!"
+	ElseIf GetValueOf("Service_LoginForm","Service_Email") = "" Then
+		print "Email CANNOT Be Empty!"
+	End If
+	service_email = "'"& GetValueOf("Service_LoginForm","service_Email") & "'"
+	password = "'" & GetValueOf("Service_LoginForm","service_Password") & "'"
+	returnValue = GetValueFromSQL("""Service""", """service_email""", """service_email"" = " & service_email)
+	returnValue1 = GetValueFromSQL("""User""", """password""", """E-mail"" = " & service_email & "AND""password"" =" & password)
+	If returnValue = NULL Or returnValue1 = NULL Then
+		print "Service Email or password is wrong!"
+	Else 
+	print "Welcome Service " & returnValue
+	openF("Service_MainForm") 
+	SetValueTo("Service_MainForm","Service_Email",""& returnValue) 
+	CloseF("Service_LoginForm") 
+	End If
+End Sub 
+
+Sub GoToBrokenProducts
+	OpenF("Service_RepairForm")
+	service_email = "'" & GetValueOf("Service_MainForm","Service_Email") & "'"
+	BrokenProducts =  "SELECT ""bppnumber"" || '-' || ""restatus"" , ""bppnumber"" FROM ""Repair"" WHERE ""service_email"" = "& service_email 
+	SQLToControl("Service_RepairForm","BrokenProducts",BrokenProducts)
+End Sub
+
+Sub Service_Logout
+	OpenF("Service_LoginForm")
+	CloseF("Service_MainForm")
+End Sub
+
+Sub ServiceBackMain
+	CloseF("Service_RepairForm")
+End Sub
+
+Sub ServiceStatusUpdate
+	service_email = "'" & GetValueOf("Service_MainForm","Service_Email") & "'"
+	bppnumber = Cint(GetValueOfIndex("Service_RepairForm","BrokenProducts",0))
+	restatus =	"'" & GetValueOf("Service_RepairForm","Rstatus") & "'"
+	UpdateRestatus = "UPDATE ""Repair"" SET ""restatus"" = "& restatus & "WHERE ""bppnumber"" = "& bppnumber
+	Query(UpdateRestatus)
+	BrokenProducts =  "SELECT ""bppnumber"" || '-' || ""restatus"" , ""bppnumber"" FROM ""Repair"" WHERE ""service_email"" = "& service_email 
+	SQLToControl("Service_RepairForm","BrokenProducts",BrokenProducts)
+	print "Status Updated!"	
+End Sub
